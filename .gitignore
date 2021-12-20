@@ -89,3 +89,4 @@ dist
 .pnp.*
 
 **/.DS_Store
+*.sublime-project

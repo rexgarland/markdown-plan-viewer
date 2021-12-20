@@ -1,4 +1,5 @@
 var cytoscape = require('cytoscape');
+var memoize = require('lodash.memoize')
 
 var data = require('./app.plan.json');
 
@@ -11,6 +12,8 @@ var nodes = data.map( task => {
 	};
 	if (task.type != null) {
 		node.classes = [task.type]
+		node.duration = task.duration
+		node.percentComplete = (task.duration-task.remaining)/task.duration
 	} else {
 		node.classes = ['label']
 	}
@@ -29,16 +32,18 @@ var edges = data.filter( task => task.dependencies.length > 0).flatMap( task => 
 });
 var elements = nodes.concat(edges);
 
-function workSvg(ele) {
+var makeSvg = memoize((ele) =>{
 	var svgText = `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg>
 <svg xmlns='http://www.w3.org/2000/svg' version='1.1' width='100' height='100'>
-	<circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="red" />
+	<circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="slategray" />
 </svg>`
 	const parser = new DOMParser();
 	const svg = parser.parseFromString(svgText, 'text/xml').documentElement;
 	var data = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg.outerHTML);
-	return data;
-}
+	const width = 20
+	const height = 20
+	return {svg: data, width: width, height: height};
+});
 
 var cy = cytoscape({ 
 	elements: elements,
@@ -47,7 +52,6 @@ var cy = cytoscape({
 	    {
 	      selector: 'node',
 	      style: {
-	        'background-color': '#666',
 	        'label': 'data(description)',
 	        'background-fit': 'cover'
 	      }
@@ -56,7 +60,8 @@ var cy = cytoscape({
 	    {
 	    	selector: '.label',
 	    	style: {
-		        'shape': 'square',
+	        	'background-color': '#666',
+		        'shape': 'ellipse',
 		        'width': '8px',
 		        'height': '8px'
 		    }
@@ -65,11 +70,9 @@ var cy = cytoscape({
 	    { 
 	    	selector: '.work',
 	    	style: {
-	    		// 'background-color': 'gainsboro',
-		        'width': '20px',
-		        'height': '20px',
-		        'background-image': workSvg,
-		        // 'background-image': 'https://live.staticflickr.com/7272/7633179468_3e19e45a0c_b.jpg'
+		        'background-image': function(ele){ return makeSvg(ele).svg; },
+		        'width': function(ele){ return makeSvg(ele).width; },
+		        'height': function(ele){ return makeSvg(ele).height; }
 	    	}
 	    },
 
