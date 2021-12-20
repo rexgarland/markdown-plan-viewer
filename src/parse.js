@@ -10,39 +10,21 @@
 // Ensure no cycles in the DAG
 
 const assert = require('assert');
-const { convertListToTree } = require('./tree');
-
-function isHeader(line) {
-	return /#+\s[^\s]+/.test(line);
-}
-
-function isTask(line) {
-	if (line.trim().length === 0) { return false };
-	// headline
-	if (isHeader(line)) { return true };
-	// unordered list
-	if (/\t*(\*|-|\+)\s[^\s]+/.test(line)) { return true };
-	// ordered list
-	if (/\t*[0-9]+\.\s[^\s]+/.test(line)) { return true };
-	return false
-}
-
-function getHeaderLevel(line) {
-	assert(isHeader(line), `Expected header for line: '${line}'`);
-	var count = 0;
-	while (line[count]=='#') {
-		count = count + 1;
-	}
-	return count-1;
-}
-
-function getListLevel(line) {
-	var count = 0;
-	while (line[count]=='\t') {
-		count = count + 1;
-	}
-	return count+1;
-}
+const { 
+	convertListToTree,
+	recurse,
+	findMatching
+} = require('./tree');
+const {
+	isHeader,
+	isTask,
+	getHeaderLevel,
+	getIndentationLevel,
+	isOrdered,
+	hasExplicitDependencies,
+	getDependencies,
+	getDescription
+} = require('./task');
 
 function getLevel(line, lastLevel) {
 	// the level is a tuple of (latestHeaderLevel, thisListLevel)
@@ -60,7 +42,7 @@ function getLevel(line, lastLevel) {
 		assert(headerLevel>0, `Only one h1 is allowed, check near line: '${line}'`);
 		return [headerLevel, 0];
 	} else {
-		return [lastLevel[0], getListLevel(line)];
+		return [lastLevel[0], getIndentationLevel(line)];
 	}
 }
 
@@ -89,6 +71,62 @@ function attachLevels(lines) {
 	return linesWithLevels;
 }
 
+function pairwise(arr, fn) {
+	for(var i=0; i < arr.length - 1; i++){
+        fn(arr[i], arr[i + 1])
+    }
+}
+
+function createOrderedListDependencies(root) {
+	if (root.children!==undefined) {
+		if (root.children.length>1) {
+			const orderedTasks = root.children.filter(n=>isOrdered(n.value));
+			pairwise(orderedTasks, (n1, n2) => {
+				if (n2.dependencies===undefined) {n2.dependencies=[]};
+				n2.dependencies.push(n1);
+			});
+		}
+		root.children.forEach(createOrderedListDependencies);
+	}
+}
+
+function createParentChildDependencies(root) {
+	if (root.children!==undefined) {
+		if (root.dependencies===undefined) {root.dependencies=[]};
+		root.children.filter(n=>!isOrdered(n.value)).forEach(n=>{
+			root.dependencies.push(n);
+		});
+		const orderedChildren = root.children.filter(n=>isOrdered(n.value));
+		if (orderedChildren.length>0) {
+			const n = orderedChildren[orderedChildren.length-1]
+			root.dependencies.push(n);
+		}
+		root.children.forEach(createParentChildDependencies);
+	}
+}
+
+function createExplicitDependencies(root) {
+	// find all the explicit dependencies
+	const explicitDependencies = [];
+	recurse(root, n=>{
+		if (hasExplicitDependencies(n.value)) {
+			explicitDependencies.push({node:n, dependencies:getDependencies(n.value)});
+		}
+	});
+	// for each, search the tree for a match
+	explicitDependencies.forEach(({node, dependencies}) => {
+		if (node.dependencies===undefined) {node.dependencies=[]};
+		dependencies.forEach(d=>{
+			const matches = findMatching(root, n=>n.value.includes(d));
+			// if one unique match, add, else error
+			assert(matches.length<2, `Found multiple tasks matching dependency: '${d}'`);
+			assert(matches.length===1, `Could not find task matching dependency: '${d}'`);
+			const match = matches[0];
+			node.dependencies.push(match);
+		});
+	})
+}
+
 function parse(text, cb) {
 	// the callback function takes (value, error)
 
@@ -99,10 +137,17 @@ function parse(text, cb) {
 
 	try {
 
+		// connect the DAG
 		const linesWithLevels = attachLevels(lines);
-		const tree = convertListToTree(linesWithLevels);
+		const root = convertListToTree(linesWithLevels);
+		createOrderedListDependencies(root);
+		createParentChildDependencies(root);
+		createExplicitDependencies(root);
 
-		dag = tree;
+		// clean up the text
+		recurse(root, n=>{n.descr=getDescription(n.value);});
+
+		dag = root;
 
 		cb(dag, null);
 

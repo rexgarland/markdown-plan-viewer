@@ -34,6 +34,25 @@ function convertListToTree(list) {
 	return convertListToTreeMutating(deepCopiedList);
 }
 
+function recurse(root, fn) {
+	fn(root);
+	if (root.children!==undefined) {
+		root.children.forEach(c=>recurse(c,fn));
+	}
+}
+
+function findMatching(root, filter) {
+	const matches = [];
+	recurse(root, n=>{
+		if (filter(n)) {
+			matches.push(n);
+		}
+	})
+	return matches;
+}
+
 module.exports = {
-	convertListToTree
+	convertListToTree,
+	recurse,
+	findMatching
 }
