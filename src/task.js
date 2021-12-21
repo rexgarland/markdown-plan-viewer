@@ -1,4 +1,5 @@
 const assert = require('assert');
+const { DateTime } = require("luxon");
 
 function isHeader(line) {
 	return /#+\s+[^\s].*/.test(line);
@@ -42,8 +43,7 @@ function hasExplicitDependencies(line) {
 
 function getDependencies(line) {
 	const m = line.match(/.*@\(([^\)]+)\)/);
-	const text = m[1];
-	return text.split(',').map(s=>s.trim());
+	return !!m ? m[1].split(',').map(s=>s.trim()) : undefined;
 }
 
 function trimAfter(regex) {
@@ -62,6 +62,58 @@ function getDescription(line) {
 	return descr.trim()
 }
 
+const ESTIMATES = { // in days
+	".": 0.5,
+	"..": 2,
+	"...": 7,
+};
+
+function getEstimate(line) {
+	const m = line.match(/\[(\.+)\]/);
+	return !!m ? ESTIMATES[m[1]] : undefined;
+}
+
+const MEASUREMENTS = { // in days
+	"h": 1/8,
+	"a": 0.5,
+	"d": 1
+};
+
+function getMeasurement(line) {
+	const m = line.match(/\[([had]+)\]/);
+	return !!m ? Array.from(m[1]).map(c=>MEASUREMENTS[c]).reduce((a,v)=>a+v,0) : undefined;
+}
+
+function count(str, char) {
+	return Array.from(str).reduce((a,v)=>a+(v===char),0);
+}
+
+function guessYear(isoPartial) {
+	const now = DateTime.now();
+	const thisYear = now.year;
+	const d = [DateTime.fromISO(`${thisYear}-${isoPartial}`)];
+	if (d[0]>now) {
+		d.unshift(DateTime.fromISO(`${thisYear-1}-${isoPartial}`));
+	} else {
+		d.push(DateTime.fromISO(`${thisYear+1}-${isoPartial}`));
+	}
+	const percentOfYear = (now-d[0])/(365*24*60*60*1000);
+	return (percentOfYear<0.2) ? d[0] : d[1]; // arbitrary choice: 20% of the year is considered "looking at next year"
+}
+
+function padDateDigits(str) {
+	return str.split('-').map(s=>s.padStart(2,0)).join('-');
+}
+
+function getDeadline(line) {
+	const m = line.match(/\[by ([0-9]+(-[0-9]+){1,2})\]/);
+	if (!m) { return };
+	var str = m[1];
+	str = padDateDigits(str);
+	if (count(str, '-')===1) { return guessYear(str); }
+	return DateTime.fromISO(str);
+}
+
 module.exports = {
 	isHeader,
 	isTask,
@@ -70,5 +122,8 @@ module.exports = {
 	isOrdered,
 	hasExplicitDependencies,
 	getDependencies,
-	getDescription
+	getDescription,
+	getEstimate,
+	getMeasurement,
+	getDeadline
 }

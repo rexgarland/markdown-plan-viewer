@@ -34,16 +34,20 @@ function convertListToTree(list) {
 	return convertListToTreeMutating(deepCopiedList);
 }
 
-function recurse(root, fn) {
-	fn(root);
-	if (root.children!==undefined) {
-		root.children.forEach(c=>recurse(c,fn));
+function recurse(next) {
+	function r(root, fn) {
+		fn(root);
+		const nextNodes = next(root);
+		if (nextNodes) {
+			nextNodes.forEach(c=>r(c,fn));
+		}
 	}
+	return r;
 }
 
 function findMatching(root, filter) {
 	const matches = [];
-	recurse(root, n=>{
+	recurse(n=>n.children)(root, n=>{
 		if (filter(n)) {
 			matches.push(n);
 		}

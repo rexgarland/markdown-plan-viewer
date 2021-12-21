@@ -1,4 +1,4 @@
-# Build iOS app [by Dec 1]
+# Build iOS app [by 12-1]
 1. architecture planning [.] [hh]
 2. prototyping
 	- functional UI [..]
