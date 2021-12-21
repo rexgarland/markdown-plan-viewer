@@ -1,8 +1,8 @@
 # Build iOS app [by 12-1]
-1. architecture planning [.] [hh]
+1. architecture planning [.] [done]
 2. prototyping
-	- functional UI [..]
-	- backend [...]
+	- functional UI [..] [ahh]
+	- backend [...] [d]
 3. clean up visual design [.]
 4. user tests / feedback [wait ..]
 5. app store material [.]

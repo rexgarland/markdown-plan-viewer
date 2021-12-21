@@ -26,7 +26,9 @@ const {
 	getDescription,
 	getEstimate,
 	getMeasurement,
-	getDeadline
+	getDeadline,
+	getType,
+	getCompletion
 } = require('./task');
 const { clone } = require('lodash');
 
@@ -146,10 +148,12 @@ function parseTaskData(node) {
 	assign = assignIfDefined(node);
 	assign('isOrdered', isOrdered);
 	assign('description', getDescription);
+	assign('type', getType);
 	assign('estimate', getEstimate);
 	assign('measurement', getMeasurement);
 	assign('deadline', getDeadline);
 	assign('explicitDependencies', getDependencies);
+	assign('done', getCompletion);
 	delete(node.value);
 }
 
@@ -260,6 +264,19 @@ function validateDeadlines(root) {
 	recurseDependencies(root, assertChronological);
 }
 
+function createGraphNodeFromTask(task) {
+	// const required = ['id','description'];
+	// const data = {};
+	// required.forEach(s=>{data[s] = task[s];})
+	// const optional = ['type','estimate','measurement','deadline'];
+	// optional.forEach(s=>{
+	// 	if (task[s]!==undefined) {
+	// 		data[s] = task[s];
+	// 	}
+	// });
+	return {data: {...task}};
+}
+
 function createGraphElements(root) {
 	const elements = [];
 	// give each task an id
@@ -267,12 +284,7 @@ function createGraphElements(root) {
 	recurseDependencies(root, t=>{t.id = i++;});
 	// create nodes
 	recurseDependencies(root, t=>{
-		const node = {
-			data: {
-				id: t.id,
-				description: t.description
-			}
-		};
+		const node = createGraphNodeFromTask(t);
 		elements.push(node);
 	});
 	// create edges
@@ -286,36 +298,8 @@ function createGraphElements(root) {
 				}
 			};
 			elements.push(edge);
-		})
-	})
-	// var nodes = data.map( task => {
-	// 	var node = {
-	// 		data: {
-	// 			id: task.id,
-	// 			description: task.description
-	// 		}
-	// 	};
-	// 	if (task.type != null) {
-	// 		node.classes = [task.type]
-	// 		node.duration = task.duration
-	// 		node.percentComplete = (task.duration-task.remaining)/task.duration
-	// 	} else {
-	// 		node.classes = ['label']
-	// 	}
-	// 	return node
-	// });
-	// var edges = data.filter( task => task.dependencies.length > 0).flatMap( task => {
-	// 	return task.dependencies.map( id => {
-	// 		return {
-	// 			data: {
-	// 				id: `${id}->${task.id}`,
-	// 				source: id,
-	// 				target: task.id
-	// 			}
-	// 		}
-	// 	})
-	// });
-	// var elements = nodes.concat(edges);
+		});
+	});
 	return elements;
 }
 

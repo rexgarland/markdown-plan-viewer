@@ -2,7 +2,6 @@ const fs = require('fs');
 const plan = fs.readFileSync(__dirname + '/app.plan.md', 'utf8');
 const { parse } = require('./parse');
 const { createGraph } = require('./graph');
-const graph = createGraph(document.getElementById('cy'));
 
 var cm = CodeMirror((el) => {el.id = 'codemirror'; document.body.prepend(el)}, {
   value: plan,
@@ -10,21 +9,25 @@ var cm = CodeMirror((el) => {el.id = 'codemirror'; document.body.prepend(el)}, {
   lineWrapping: true
 });
 
-const text = cm.doc.getValue();
+const graph = createGraph(document.getElementById('cy'));
 
-parse(text, (dag,error) => {
-  if (error !== null) {
-    console.error(error.message);
-  } else {
-    graph(dag);
-  }
-});
+function parseAndDisplay(text) {
+  parse(text, (dag,error) => {
+    if (error !== null) {
+      console.log(error);
+    } else {
+      graph(dag);
+    }
+  })
+}
 
-// batch changes
-var timer = undefined;
-function batch(timeout, fn) {
+parseAndDisplay(cm.doc.getValue());
+
+// limit changes
+var timer;
+function limit(timeout, fn) {
   return (...args) => {
-    if (timer !== undefined) {
+    if (timer) {
       clearTimeout(timer);
     }
     timer = setTimeout(()=>{
@@ -34,13 +37,4 @@ function batch(timeout, fn) {
   }
 }
 
-cm.on('change', batch(1000, (inst) => {
-  const text = inst.doc.getValue();
-  parse(text, (dag,error) => {
-    if (error !== null) {
-      console.log(error);
-    } else {
-      graph(dag);
-    }
-  })
-}));
+cm.on('change', limit(1000, (inst)=>parseAndDisplay(inst.doc.getValue())));

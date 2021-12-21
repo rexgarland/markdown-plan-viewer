@@ -65,12 +65,33 @@ function getDescription(line) {
 const ESTIMATES = { // in days
 	".": 0.5,
 	"..": 2,
-	"...": 7,
+	"...": 5,
 };
 
-function getEstimate(line) {
+function getWorkEstimate(line) {
 	const m = line.match(/\[(\.+)\]/);
 	return !!m ? ESTIMATES[m[1]] : undefined;
+}
+
+function getWaitEstimate(line) {
+	const m = line.match(/\[wait (\.+)\]/);
+	return !!m ? ESTIMATES[m[1]] : undefined;
+}
+
+function getEstimate(line) {
+	var e = getWorkEstimate(line);
+	if (e) { return e; }
+	e = getWaitEstimate(line);
+	if (e) { return e; }
+	return;
+}
+
+function getType(line) {
+	var e = getWorkEstimate(line);
+	if (e) { return 'work'; }
+	e = getWaitEstimate(line);
+	if (e) { return 'wait'; }
+	return;
 }
 
 const MEASUREMENTS = { // in days
@@ -114,6 +135,13 @@ function getDeadline(line) {
 	return DateTime.fromISO(str);
 }
 
+function getCompletion(line) {
+	const m = line.match(/\[done\]/);
+	if (m) {
+		return true
+	}
+}
+
 module.exports = {
 	isHeader,
 	isTask,
@@ -125,5 +153,7 @@ module.exports = {
 	getDescription,
 	getEstimate,
 	getMeasurement,
-	getDeadline
+	getDeadline,
+	getType,
+	getCompletion
 }
