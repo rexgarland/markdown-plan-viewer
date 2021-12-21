@@ -6,3 +6,5 @@ Visualize a [markdown plan](https://github.com/rexgarland/markdown-plan) in your
 npm install
 npm start
 ```
+
+[Demo](https://rexgarland.dev/app/markdown-plan/)
