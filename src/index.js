@@ -2,6 +2,7 @@ const fs = require('fs');
 const plan = fs.readFileSync(__dirname + '/app.plan.md', 'utf8');
 const { parse } = require('./parse');
 const { createGraph } = require('./graph');
+const _ = require('lodash');
 
 var cm = CodeMirror((el) => {el.id = 'codemirror'; document.body.prepend(el)}, {
   value: plan,
@@ -11,12 +12,16 @@ var cm = CodeMirror((el) => {el.id = 'codemirror'; document.body.prepend(el)}, {
 
 const graph = createGraph(document.getElementById('cy'));
 
+var previousDag;
 function parseAndDisplay(text) {
   parse(text, (dag,error) => {
     if (error !== null) {
       console.log(error);
     } else {
-      graph(dag);
+      if (!_.isEqual(dag, previousDag)) {
+        previousDag = _.cloneDeep(dag);
+        graph(dag);
+      }
     }
   })
 }
@@ -37,4 +42,4 @@ function limit(timeout, fn) {
   }
 }
 
-cm.on('change', limit(1000, (inst)=>parseAndDisplay(inst.doc.getValue())));
+cm.on('change', limit(2000, (inst)=>parseAndDisplay(inst.doc.getValue())));

@@ -265,16 +265,17 @@ function validateDeadlines(root) {
 }
 
 function createGraphNodeFromTask(task) {
-	// const required = ['id','description'];
-	// const data = {};
-	// required.forEach(s=>{data[s] = task[s];})
-	// const optional = ['type','estimate','measurement','deadline'];
-	// optional.forEach(s=>{
-	// 	if (task[s]!==undefined) {
-	// 		data[s] = task[s];
-	// 	}
-	// });
-	return {data: {...task}};
+	const required = ['id','description'];
+	const data = {};
+	required.forEach(s=>{data[s] = task[s];})
+	const optional = ['type','estimate','measurement','deadline','done'];
+	optional.forEach(s=>{
+		if (task[s]!==undefined) {
+			data[s] = task[s];
+		}
+	});
+	return {data};
+	// return {data: {...task}};
 }
 
 function createGraphElements(root) {
