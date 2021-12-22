@@ -1,10 +1,13 @@
 const fs = require('fs');
-const plan = fs.readFileSync(__dirname + '/app.plan.md', 'utf8');
-const { parse } = require('./parse');
-const { createGraph } = require('./graph');
 const _ = require('lodash');
 
-var cm = CodeMirror((el) => {el.id = 'codemirror'; document.body.prepend(el)}, {
+const { makeDraggable } = require('./drag');
+const { parse } = require('./parse');
+const { createGraph } = require('./graph');
+
+const plan = fs.readFileSync(__dirname + '/app.plan.md', 'utf8');
+
+var cm = CodeMirror((el) => {el.id = 'codemirror'; document.getElementById('viewer').prepend(el)}, {
   value: plan,
   mode:  "markdown",
   lineWrapping: true
@@ -42,4 +45,8 @@ function limit(timeout, fn) {
   }
 }
 
-cm.on('change', limit(2000, (inst)=>parseAndDisplay(inst.doc.getValue())));
+cm.on('change', limit(1000, (inst)=>parseAndDisplay(inst.doc.getValue())));
+
+
+// resizing
+makeDraggable(document.getElementById('divider'));

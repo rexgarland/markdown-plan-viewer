@@ -29,14 +29,6 @@ function getHeaderLevel(line) {
 	return count-1;
 }
 
-function getIndentationLevel(line) {
-	var count = 0;
-	while (line[count]=='\t') {
-		count = count + 1;
-	}
-	return count+1;
-}
-
 function hasExplicitDependencies(line) {
 	return /.*@\(([^\)]+)\)/.test(line);
 }
@@ -146,7 +138,6 @@ module.exports = {
 	isHeader,
 	isTask,
 	getHeaderLevel,
-	getIndentationLevel,
 	isOrdered,
 	hasExplicitDependencies,
 	getDependencies,

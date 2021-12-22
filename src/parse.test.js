@@ -1,4 +1,6 @@
-const { createTree } = require('./parse');
+const { 
+	createTree
+} = require('./parse');
 
 // test('creates a tree from lines with levels', () => {
 // 	const linesWithLevels = [

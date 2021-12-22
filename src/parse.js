@@ -1,15 +1,6 @@
-// For each line in the code:
-// 	add it to the ordered tree (just the text)
-// For each group of branches:
-// 	create intra-group dependencies (ordered lists)
-
-// For each parent:
-// 	create dependencies from children (unordered or last ordered)
-// For each explicit dep:
-// 	find all matches, assert exists and unique, create dependency
-// Ensure no cycles in the DAG
-
 const assert = require('assert');
+const _ = require('lodash');
+
 const { 
 	convertListToTree,
 	recurse,
@@ -19,7 +10,6 @@ const {
 	isHeader,
 	isTask,
 	getHeaderLevel,
-	getIndentationLevel,
 	isOrdered,
 	hasExplicitDependencies,
 	getDependencies,
@@ -30,28 +20,34 @@ const {
 	getType,
 	getCompletion
 } = require('./task');
-const { clone } = require('lodash');
+const {
+	inferIndentation,
+	getIndentationLevel
+} = require('./stringUtils');
 
 const recurseChildren = recurse(n=>n.children);
 const recurseDependencies = recurse(n=>n.dependencies);
 
-function getLevel(line, lastLevel) {
-	// the level is a tuple of (latestHeaderLevel, thisListLevel)
-	// header level is '#'=>0, '##'=>1, etc
-	// list level is '- ...'=>1, '\t- ...'=>2, etc
-	// h+l is the "total level," used to ensure that the task hierarchy can be parsed correctly
-	if (!lastLevel) { // first task
-		assert(isHeader(line), "First task must be a title (h1)");
-		assert(getHeaderLevel(line)==0, "First task must be a title (h1)");
-		return [0, 0];
-	}
-	// subsequent tasks
-	if (isHeader(line)) {
-		const headerLevel = getHeaderLevel(line);
-		assert(headerLevel>0, `Only one h1 is allowed, check near line: '${line}'`);
-		return [headerLevel, 0];
-	} else {
-		return [lastLevel[0], getIndentationLevel(line)];
+function getLevel(indent) {
+	const indentLevel = getIndentationLevel(indent);
+	return (line, lastLevel) => {
+		// the level is a tuple of (latestHeaderLevel, thisListLevel)
+		// header level is '#'=>0, '##'=>1, etc
+		// list level is '- ...'=>1, '\t- ...'=>2, etc
+		// h+l is the "total level," used to ensure that the task hierarchy can be parsed correctly
+		if (!lastLevel) { // first task
+			assert(isHeader(line), "First task must be a title (h1)");
+			assert(getHeaderLevel(line)==0, "First task must be a title (h1)");
+			return [0, 0];
+		}
+		// subsequent tasks
+		if (isHeader(line)) {
+			const headerLevel = getHeaderLevel(line);
+			assert(headerLevel>0, `Only one h1 is allowed, check near line: '${line}'`);
+			return [headerLevel, 0];
+		} else {
+			return [lastLevel[0], indentLevel(line)+1];
+		}
 	}
 }
 
@@ -60,8 +56,10 @@ function attachLevels(lines) {
 	var lastLevel = undefined;
 	var linesWithLevels = [];
 
+	const indent = inferIndentation(lines);
+
 	lines.forEach(line=>{
-		const level = getLevel(line, lastLevel);
+		const level = getLevel(indent)(line, lastLevel);
 		linesWithLevels.push({line, level});
 		if (lastLevel) {
 			const headerDiff = level[0]-lastLevel[0];
@@ -228,7 +226,7 @@ function trimRedundantDependencies(root) {
 	// will blow up on larger graphs
 	function trim(node) {
 		if (!node.dependencies) { return };
-		const deps = clone(node.dependencies);
+		const deps = _.clone(node.dependencies);
 		deps.forEach(dep=> {
 			const otherDeps = deps.filter(otherDep=>(otherDep!==dep));
 			otherDeps.forEach(otherDep=>{
