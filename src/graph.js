@@ -161,7 +161,7 @@ function createGraph(container) {
 			      style: {
 			        'label': 'data(description)',
 			        'font-family': 'sans-serif',
-			        'font-size': 12,
+			        'font-size': 9,
 			        'font-weight': 'bold',
 			        'text-wrap': 'wrap',
 			        'text-max-width': textWidth,
