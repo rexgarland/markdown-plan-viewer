@@ -10,7 +10,10 @@ const plan = fs.readFileSync(__dirname + '/app.plan.md', 'utf8');
 var cm = CodeMirror((el) => {el.id = 'codemirror'; document.getElementById('viewer').prepend(el)}, {
   value: plan,
   mode:  "markdown",
-  lineWrapping: true
+  lineWrapping: true,
+  indentWithTabs: true,
+  smartIndent: false,
+  indentUnit: 1
 });
 
 const graph = createGraph(document.getElementById('cy'));
